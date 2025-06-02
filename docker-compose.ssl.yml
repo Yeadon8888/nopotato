@@ -1,0 +1,69 @@
+#version: '3.8'
+
+services:
+  # MongoDB数据库
+  mongodb:
+    image: mongo:5.0
+    container_name: nopotato-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: nopotato
+    ports:
+      - "127.0.0.1:27017:27017"  # 只允许本地访问
+    volumes:
+      - mongodb_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - nopotato-network
+
+  # 后端API服务
+  backend:
+    build:
+      context: ./potato-server
+      dockerfile: Dockerfile
+    container_name: nopotato-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGO_URI: mongodb://nopotato_user:userpassword123@mongodb:27017/nopotato
+      JWT_SECRET: your_super_secret_jwt_key_for_production_change_this
+      JWT_EXPIRE: 30d
+      ALLOWED_ORIGINS: http://potato.yeadon.cc,https://potato.yeadon.cc,http://localhost
+    ports:
+      - "127.0.0.1:5000:5000"  # 只允许本地访问，通过宝塔代理
+    depends_on:
+      - mongodb
+    networks:
+      - nopotato-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 前端Web服务 - 内部端口，通过宝塔Nginx代理
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nopotato-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"  # 使用8080端口，避免与宝塔Nginx冲突
+    depends_on:
+      - backend
+    networks:
+      - nopotato-network
+
+# 数据卷
+volumes:
+  mongodb_data:
+    driver: local
+
+# 网络
+networks:
+  nopotato-network:
+    driver: bridge

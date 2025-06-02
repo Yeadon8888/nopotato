@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据调试页面 - NoPotato</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .data-item {
+            background: #f9f9f9;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            border-left: 4px solid #4CAF50;
+        }
+        .error {
+            color: red;
+            background: #ffe6e6;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .success {
+            color: green;
+            background: #e6ffe6;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .json-display {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 3px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 NoPotato 数据调试页面</h1>
+
+        <div class="section">
+            <h3>🔐 用户认证状态</h3>
+            <div id="authStatus"></div>
+            <div id="loginForm" style="display: none; margin: 10px 0;">
+                <input type="email" id="loginEmail" placeholder="邮箱" style="margin: 5px; padding: 8px;">
+                <input type="password" id="loginPassword" placeholder="密码" style="margin: 5px; padding: 8px;">
+                <button class="btn" onclick="login()">登录</button>
+            </div>
+            <button class="btn" onclick="checkAuth()">检查认证状态</button>
+            <button class="btn" onclick="showLoginForm()">显示登录表单</button>
+            <button class="btn" onclick="logout()">退出登录</button>
+        </div>
+
+        <div class="section">
+            <h3>📊 数据统计概览</h3>
+            <div class="stats" id="statsOverview"></div>
+        </div>
+
+        <div class="section">
+            <h3>📋 任务数据</h3>
+            <div id="tasksStatus"></div>
+            <button class="btn" onclick="loadTasks()">加载任务数据</button>
+            <div id="tasksData" class="json-display"></div>
+        </div>
+
+        <div class="section">
+            <h3>🍅 番茄钟记录</h3>
+            <div id="pomodorosStatus"></div>
+            <button class="btn" onclick="loadPomodoros()">加载番茄钟记录</button>
+            <div id="pomodorosData" class="json-display"></div>
+        </div>
+
+        <div class="section">
+            <h3>📈 统计数据</h3>
+            <div id="statsStatus"></div>
+            <button class="btn" onclick="loadStats()">加载统计数据</button>
+            <div id="statsData" class="json-display"></div>
+        </div>
+
+        <div class="section">
+            <h3>🤖 AI 用户日志</h3>
+            <div id="aiLogsStatus"></div>
+            <button class="btn" onclick="loadAILogs()">加载AI日志</button>
+            <div id="aiLogsData" class="json-display"></div>
+        </div>
+
+        <div class="section">
+            <h3>🔄 一键加载所有数据</h3>
+            <button class="btn" onclick="loadAllData()">加载所有数据</button>
+        </div>
+    </div>
+
+    <script>
+        // API 基础配置
+        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
+
+        // 获取存储的token
+        function getToken() {
+            return localStorage.getItem('token');
+        }
+
+        // 通用API请求函数
+        async function apiRequest(endpoint, options = {}) {
+            const token = getToken();
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` })
+                }
+            };
+
+            const finalOptions = { ...defaultOptions, ...options };
+
+            try {
+                const response = await fetch(`${API_BASE}/api${endpoint}`, finalOptions);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${data.message || '请求失败'}`);
+                }
+
+                return data;
+            } catch (error) {
+                console.error('API请求错误:', error);
+                throw error;
+            }
+        }
+
+        // 显示登录表单
+        function showLoginForm() {
+            const loginForm = document.getElementById('loginForm');
+            loginForm.style.display = loginForm.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 登录函数
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const statusDiv = document.getElementById('authStatus');
+
+            if (!email || !password) {
+                statusDiv.innerHTML = '<div class="error">❌ 请输入邮箱和密码</div>';
+                return;
+            }
+
+            try {
+                statusDiv.innerHTML = '<div>🔄 登录中...</div>';
+
+                const response = await apiRequest('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+
+                // 保存token
+                localStorage.setItem('token', response.token);
+
+                statusDiv.innerHTML = '<div class="success">✅ 登录成功</div>';
+                document.getElementById('loginForm').style.display = 'none';
+
+                // 自动检查认证状态
+                setTimeout(checkAuth, 500);
+
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ 登录失败: ${error.message}</div>`;
+            }
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('token');
+            document.getElementById('authStatus').innerHTML = '<div class="error">❌ 已退出登录</div>';
+
+            // 清空所有数据显示
+            document.getElementById('tasksData').textContent = '';
+            document.getElementById('pomodorosData').textContent = '';
+            document.getElementById('statsData').textContent = '';
+            document.getElementById('aiLogsData').textContent = '';
+            document.getElementById('statsOverview').innerHTML = '';
+        }
+
+        // 检查认证状态
+        async function checkAuth() {
+            const statusDiv = document.getElementById('authStatus');
+
+            try {
+                const token = getToken();
+                if (!token) {
+                    statusDiv.innerHTML = '<div class="error">❌ 未找到认证Token，请先登录</div>';
+                    return false;
+                }
+
+                statusDiv.innerHTML = '<div>🔄 检查中...</div>';
+
+                const response = await apiRequest('/auth/me');
+
+                statusDiv.innerHTML = `
+                    <div class="success">✅ 认证成功</div>
+                    <div class="data-item">
+                        <strong>用户ID:</strong> ${response.data._id}<br>
+                        <strong>用户名:</strong> ${response.data.username}<br>
+                        <strong>邮箱:</strong> ${response.data.email}<br>
+                        <strong>注册时间:</strong> ${new Date(response.data.createdAt).toLocaleString()}
+                    </div>
+                `;
+                return true;
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ 认证失败: ${error.message}</div>`;
+                return false;
+            }
+        }
+
+        // 加载任务数据
+        async function loadTasks() {
+            const statusDiv = document.getElementById('tasksStatus');
+            const dataDiv = document.getElementById('tasksData');
+
+            try {
+                statusDiv.innerHTML = '<div>🔄 加载中...</div>';
+
+                const response = await apiRequest('/tasks');
+
+                statusDiv.innerHTML = `<div class="success">✅ 加载成功 (${response.data.length} 个任务)</div>`;
+                dataDiv.textContent = JSON.stringify(response.data, null, 2);
+
+                updateStatsOverview();
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ 加载失败: ${error.message}</div>`;
+                dataDiv.textContent = '';
+            }
+        }
+
+        // 加载番茄钟记录
+        async function loadPomodoros() {
+            const statusDiv = document.getElementById('pomodorosStatus');
+            const dataDiv = document.getElementById('pomodorosData');
+
+            try {
+                statusDiv.innerHTML = '<div>🔄 加载中...</div>';
+
+                const response = await apiRequest('/pomodoros');
+
+                statusDiv.innerHTML = `<div class="success">✅ 加载成功 (${response.data.length} 条记录)</div>`;
+                dataDiv.textContent = JSON.stringify(response.data, null, 2);
+
+                updateStatsOverview();
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ 加载失败: ${error.message}</div>`;
+                dataDiv.textContent = '';
+            }
+        }
+
+        // 加载统计数据
+        async function loadStats() {
+            const statusDiv = document.getElementById('statsStatus');
+            const dataDiv = document.getElementById('statsData');
+
+            try {
+                statusDiv.innerHTML = '<div>🔄 加载中...</div>';
+
+                const response = await apiRequest('/pomodoros/stats');
+
+                statusDiv.innerHTML = `<div class="success">✅ 加载成功</div>`;
+                dataDiv.textContent = JSON.stringify(response.data, null, 2);
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ 加载失败: ${error.message}</div>`;
+                dataDiv.textContent = '';
+            }
+        }
+
+        // 加载AI日志
+        async function loadAILogs() {
+            const statusDiv = document.getElementById('aiLogsStatus');
+            const dataDiv = document.getElementById('aiLogsData');
+
+            try {
+                statusDiv.innerHTML = '<div>🔄 加载中...</div>';
+
+                const response = await apiRequest('/ai/user-logs');
+
+                // 提取简化的AI数据，只保留关键字段
+                const simplifiedData = {
+                    userInfo: response.data.userInfo,
+                    statistics: response.data.statistics,
+                    simplifiedRecords: response.data.aiData.pomodoroRecords.map(record => ({
+                        taskTitle: record.taskTitle,
+                        duration: record.duration,
+                        completed: record.completed
+                    }))
+                };
+
+                statusDiv.innerHTML = `<div class="success">✅ 加载成功 (${simplifiedData.simplifiedRecords.length} 条记录)</div>`;
+                dataDiv.textContent = JSON.stringify(simplifiedData, null, 2);
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ 加载失败: ${error.message}</div>`;
+                dataDiv.textContent = '';
+            }
+        }
+
+        // 更新统计概览
+        function updateStatsOverview() {
+            const tasksData = document.getElementById('tasksData').textContent;
+            const pomodorosData = document.getElementById('pomodorosData').textContent;
+
+            let tasks = [];
+            let pomodoros = [];
+
+            try {
+                if (tasksData) tasks = JSON.parse(tasksData);
+                if (pomodorosData) pomodoros = JSON.parse(pomodorosData);
+            } catch (e) {
+                console.error('解析数据失败:', e);
+            }
+
+            const completedTasks = tasks.filter(task => task.completed).length;
+            const completionRate = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
+
+            document.getElementById('statsOverview').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${tasks.length}</div>
+                    <div class="stat-label">总任务数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${completedTasks}</div>
+                    <div class="stat-label">已完成任务</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${pomodoros.length}</div>
+                    <div class="stat-label">番茄钟记录</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${completionRate}%</div>
+                    <div class="stat-label">完成率</div>
+                </div>
+            `;
+        }
+
+        // 一键加载所有数据
+        async function loadAllData() {
+            const isAuthenticated = await checkAuth();
+            if (!isAuthenticated) {
+                alert('请先登录！');
+                showLoginForm();
+                return;
+            }
+
+            await loadTasks();
+            await loadPomodoros();
+            await loadStats();
+            await loadAILogs();
+        }
+
+        // 页面加载时自动检查认证状态
+        window.onload = function() {
+            checkAuth();
+        };
+    </script>
+</body>
+</html>

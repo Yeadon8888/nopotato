@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>番茄钟 - NoPotato</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- 添加字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* 用户菜单样式 */
+        .user-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 20px;
+            transition: var(--transition);
+        }
+
+        .user-info:hover {
+            background-color: var(--gray-light);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: 45px;
+            right: 0;
+            background-color: var(--white);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            width: 150px;
+            display: none;
+            z-index: 100;
+        }
+
+        .user-dropdown.active {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--gray-light);
+        }
+
+        .login-btn {
+            padding: 8px 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .login-btn:hover {
+            background-color: var(--primary-dark);
+        }
+
+        /* 日历样式 */
+        .calendar-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: var(--white);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            display: none;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .month-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .calendar-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 5px;
+        }
+
+        .calendar-nav-btn {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--gray-light);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .calendar-nav-btn:hover {
+            background-color: var(--gray);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-weight: 500;
+            color: var(--gray-dark);
+            font-size: 0.8rem;
+            padding: 5px 0;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .calendar-day:hover {
+            background-color: var(--gray-light);
+        }
+
+        .calendar-day.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .calendar-day.has-tasks::after {
+            content: "";
+            position: absolute;
+            bottom: 4px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+        }
+
+        .calendar-day.active.has-tasks::after {
+            background-color: white;
+        }
+
+        .calendar-day .day-number {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .calendar-day.today {
+            border: 2px solid var(--primary-color);
+        }
+
+        .calendar-day.other-month {
+            color: var(--gray);
+            opacity: 0.6;
+        }
+
+        /* 历史任务容器 */
+        .history-tasks-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .history-tasks-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .history-date {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .history-close-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--gray-dark);
+            font-size: 1.2rem;
+        }
+
+        .no-tasks-message {
+            text-align: center;
+            color: var(--gray);
+            padding: 15px;
+        }
+
+        /* 恢复左右布局 */
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 日历切换按钮 */
+        .calendar-toggle-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .calendar-toggle-btn:hover {
+            color: var(--primary-dark);
+        }
+
+        .calendar-toggle-btn .icon {
+            transition: transform 0.3s ease;
+        }
+
+        .calendar-toggle-btn.active .icon {
+            transform: rotate(180deg);
+        }
+
+        /* AI相关样式 */
+        .ai-assistant-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            z-index: 100;
+            border: none;
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .ai-assistant-btn:hover {
+            transform: scale(1.1);
+            background-color: var(--primary-dark);
+        }
+
+        .ai-chat-container {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            background-color: var(--white);
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .ai-chat-header {
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ai-chat-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-chat-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .ai-chat-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .ai-chat-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .ai-chat-container.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            max-width: none;
+            border-radius: 0;
+        }
+
+        .ai-chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .ai-message {
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-break: break-word;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .ai-message.user {
+            background-color: var(--primary-light);
+            color: var(--gray-dark);
+            align-self: flex-end;
+        }
+
+        .ai-message.bot {
+            background-color: var(--gray-light);
+            color: var(--gray-dark);
+            align-self: flex-start;
+        }
+
+        .ai-chat-input {
+            padding: 15px;
+            border-top: 1px solid var(--gray-light);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .ai-chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--gray-light);
+            border-radius: 20px;
+            outline: none;
+            min-width: 200px;
+        }
+
+        .ai-chat-input input:disabled {
+            background-color: var(--gray-light);
+            color: var(--gray);
+            cursor: not-allowed;
+        }
+
+        .ai-chat-input button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ai-chat-input button:hover:not(:disabled) {
+            background-color: var(--primary-dark);
+        }
+
+        .ai-chat-input button:disabled {
+            background-color: var(--gray);
+            cursor: not-allowed;
+        }
+
+        .import-logs-btn {
+            background-color: #28a745 !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 20px !important;
+            padding: 10px 20px !important;
+            cursor: pointer !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            width: auto !important;
+            height: auto !important;
+            flex-shrink: 0 !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .import-logs-btn:hover {
+            background-color: #218838 !important;
+            transform: translateY(-1px) !important;
+        }
+
+        .import-logs-btn:active {
+            transform: translateY(0) !important;
+        }
+
+        .ai-typing {
+            display: flex;
+            gap: 3px;
+            padding: 10px 15px;
+            border-radius: 10px;
+            background-color: var(--gray-light);
+            color: var(--gray-dark);
+            align-self: flex-start;
+            width: 60px;
+        }
+
+        .ai-typing span {
+            width: 8px;
+            height: 8px;
+            background-color: var(--gray);
+            border-radius: 50%;
+            display: inline-block;
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+
+        .ai-typing span:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .ai-typing span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .ai-typing span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 80%, 100% {
+                transform: scale(0.6);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="doc-link">
+                <a href="https://q05hlvbg0wa.feishu.cn/wiki/RQsSwioJAiohLjkiTtecL3Uan0c?from=from_copylink" target="_blank" class="doc-button">
+                    <i class="fas fa-book"></i> 文档
+                </a>
+                <a href="ranking.html" class="doc-button">
+                    <i class="fas fa-trophy"></i> 排行榜
+                </a>
+            </div>
+            <h1>NoPotato <span class="emoji">🍅</span></h1>
+            <p class="subtitle">专注工作，高效学习</p>
+
+            <!-- 用户菜单 -->
+            <div class="user-menu" id="user-menu">
+                <!-- 登录前显示 -->
+                <div class="login-section" id="login-section">
+                    <a href="login.html" class="login-btn">登录</a>
+                </div>
+
+                <!-- 登录后显示 -->
+                <div class="user-section" id="user-section" style="display: none;">
+                    <div class="user-info" id="user-info">
+                        <div class="user-avatar" id="user-avatar">U</div>
+                        <span id="username">用户名</span>
+                    </div>
+
+                    <div class="user-dropdown" id="user-dropdown">
+                        <div class="dropdown-item" id="profile-btn">个人中心</div>
+                        <div class="dropdown-item" id="logout-btn">退出登录</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div class="timer-container">
+                <div class="timer">
+                    <div class="timer-display">
+                        <span id="minutes">25</span>:<span id="seconds">00</span>
+                    </div>
+                    <div class="timer-label" id="timer-status">工作时间</div>
+                </div>
+                <div class="timer-controls">
+                    <button id="start-btn" class="primary-btn">开始</button>
+                    <button id="pause-btn" class="secondary-btn" disabled>暂停</button>
+                    <button id="reset-btn" class="secondary-btn" disabled>重置</button>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+            </div>
+
+            <div class="tasks-container">
+                <div class="section-header">
+                    <h2>今日任务</h2>
+                    <button id="add-task-btn" class="icon-btn">+ 添加任务</button>
+                </div>
+
+                <div class="tasks-list" id="tasks-list">
+                    <!-- 任务会通过JavaScript动态添加 -->
+                </div>
+            </div>
+        </main>
+
+        <!-- 新的历史记录区域 -->
+        <div class="history-section">
+            <div class="section-header">
+                <h2>历史记录</h2>
+            </div>
+            <div class="history-content">
+                <!-- 左侧日历 -->
+                <div class="calendar-container" id="calendar-container">
+                    <div class="calendar-header">
+                        <div class="month-selector">
+                            <div class="calendar-title" id="calendar-title">2023年12月</div>
+                            <div class="calendar-nav">
+                                <button class="calendar-nav-btn" id="prev-month-btn">&lt;</button>
+                                <button class="calendar-nav-btn" id="next-month-btn">&gt;</button>
+                                <button class="calendar-nav-btn" id="today-btn">今</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid">
+                        <!-- 星期表头 -->
+                        <div class="calendar-day-header">日</div>
+                        <div class="calendar-day-header">一</div>
+                        <div class="calendar-day-header">二</div>
+                        <div class="calendar-day-header">三</div>
+                        <div class="calendar-day-header">四</div>
+                        <div class="calendar-day-header">五</div>
+                        <div class="calendar-day-header">六</div>
+                    </div>
+                </div>
+
+                <!-- 右侧历史任务 -->
+                <div class="history-tasks-container" id="history-tasks-container">
+                    <div class="history-tasks-header">
+                        <div class="history-date" id="history-date">选择一个日期查看任务</div>
+                    </div>
+                    <div class="tasks-list" id="history-tasks-list">
+                        <!-- 历史任务会通过JavaScript动态添加 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加任务对话框 -->
+        <div class="modal" id="add-task-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>添加新任务</h3>
+                    <button id="close-modal-btn" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="task-name">任务名称</label>
+                        <input type="text" id="task-name" placeholder="请输入任务名称">
+                    </div>
+                    <div class="form-group">
+                        <label for="pomodoro-count">预计番茄数</label>
+                        <input type="number" id="pomodoro-count" min="1" value="1">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-task-btn" class="primary-btn">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 任务完成对话框 -->
+        <div class="modal" id="task-complete-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>任务完成</h3>
+                    <button id="close-complete-modal-btn" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>恭喜您完成了任务: <span id="completed-task-name"></span></p>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <span class="stat-label">预计番茄数:</span>
+                            <span id="expected-pomodoros"></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">实际番茄数:</span>
+                            <span id="actual-pomodoros"></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">差异:</span>
+                            <span id="pomodoro-difference"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="confirm-complete-btn" class="primary-btn">确认</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 完成一个番茄钟的通知对话框 -->
+        <div class="modal" id="pomodoro-complete-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>番茄钟完成</h3>
+                </div>
+                <div class="modal-body">
+                    <p>您已完成一个番茄钟！现在是休息时间。</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="start-break-btn" class="primary-btn">开始休息 (5分钟)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 休息时间结束通知对话框 -->
+        <div class="modal" id="break-complete-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>休息完成</h3>
+                </div>
+                <div class="modal-body">
+                    <p>休息时间结束！准备开始下一个番茄钟？</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="start-next-pomodoro-btn" class="primary-btn">开始下一个番茄钟</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 登录提示对话框 -->
+        <div class="modal" id="login-prompt-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>需要登录</h3>
+                    <button id="close-login-prompt-btn" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>要使用该功能，请先登录或注册账号。</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="go-login-btn" class="primary-btn">去登录</button>
+                    <button id="go-register-btn" class="secondary-btn">去注册</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 遮罩层 -->
+        <div class="overlay" id="overlay"></div>
+    </div>
+
+    <script>
+// 覆盖API_URL，确保使用相对路径
+// 动态获取API基础URL
+const getApiUrl = () => {
+  // 检测环境
+  const isDevelopment = window.location.hostname === 'localhost' ||
+                       window.location.hostname === '127.0.0.1' ||
+                       window.location.port === '8080';
+
+  if (isDevelopment) {
+    return 'http://localhost:5000/api';
+  } else {
+    return '/api';  // 生产环境使用相对路径
+  }
+};
+
+const API_URL = getApiUrl();
+
+// 管理API请求的类
+class API {
+  static getToken() {
+    return localStorage.getItem('pomo_token');
+  }
+
+  static setToken(token) {
+    localStorage.setItem('pomo_token', token);
+  }
+
+  static clearToken() {
+    localStorage.removeItem('pomo_token');
+  }
+
+  static getHeaders() {
+    const token = this.getToken();
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    return headers;
+  }
+
+  static async request(endpoint, method = 'GET', data = null) {
+    const url = `${API_URL}${endpoint}`;
+    const options = {
+      method,
+      headers: this.getHeaders()
+    };
+
+    if (data && (method === 'POST' || method === 'PUT')) {
+      options.body = JSON.stringify(data);
+    }
+
+    try {
+      const response = await fetch(url, options);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || '请求失败');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('API请求错误:', error);
+      throw error;
+    }
+  }
+
+  static async register(userData) {
+    const result = await this.request('/auth/register', 'POST', userData);
+    if (result.token) {
+      this.setToken(result.token);
+    }
+    return result;
+  }
+
+  static async login(credentials) {
+    const result = await this.request('/auth/login', 'POST', credentials);
+    if (result.token) {
+      this.setToken(result.token);
+    }
+    return result;
+  }
+
+  static async getCurrentUser() {
+    return await this.request('/auth/me');
+  }
+
+  static async logout() {
+    const result = await this.request('/auth/logout', 'POST');
+    this.clearToken();
+    return result;
+  }
+
+  // 任务API
+  static async getTasks() {
+    return await this.request('/tasks');
+  }
+
+  static async getTask(id) {
+    return await this.request(`/tasks/${id}`);
+  }
+
+  static async createTask(taskData) {
+    return await this.request('/tasks', 'POST', taskData);
+  }
+
+  static async updateTask(id, taskData) {
+    return await this.request(`/tasks/${id}`, 'PUT', taskData);
+  }
+
+  static async deleteTask(id) {
+    return await this.request(`/tasks/${id}`, 'DELETE');
+  }
+
+  static async completeTask(id, data) {
+    return await this.request(`/tasks/${id}/complete`, 'PUT', data);
+  }
+
+  // 番茄钟记录API
+  static async getPomodoros(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return await this.request(`/pomodoros?${queryString}`);
+  }
+
+  static async createPomodoro(data) {
+    return await this.request('/pomodoros', 'POST', data);
+  }
+
+  static async updatePomodoro(id, data) {
+    return await this.request(`/pomodoros/${id}`, 'PUT', data);
+  }
+
+  static async getPomodoroStats(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return await this.request(`/pomodoros/stats?${queryString}`);
+  }
+
+  // 数据导出API
+  static async exportDaily(date = null) {
+    const params = date ? { date } : {};
+    const queryString = new URLSearchParams(params).toString();
+    return await this.request(`/export/daily?${queryString}`);
+  }
+
+  static async exportRange(start, end) {
+    const params = { start, end };
+    const queryString = new URLSearchParams(params).toString();
+    return await this.request(`/export/range?${queryString}`);
+  }
+
+  // AI助手API
+  static async getAIAnalysis() {
+    return await this.request('/ai/analyze', 'POST');
+  }
+
+  static async getUserLogs() {
+    return await this.request('/ai/user-logs', 'GET');
+  }
+
+  static async chatWithAI(message, conversationMessages = []) {
+    return await this.request('/ai/chat', 'POST', {
+      message,
+      conversationMessages
+    });
+  }
+
+  // 获取排行榜数据
+  static async getRanking(period = 'week') {
+    try {
+      return await this.request(`/ranking?period=${period}`);
+    } catch (error) {
+      console.error('获取排行榜数据失败:', error);
+      throw error;
+    }
+  }
+}
+
+// 导出API类
+window.API = API;
+</script>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 应用保存的主题设置
+            const savedTheme = localStorage.getItem('theme') || 'default';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+
+            // 用户菜单相关元素
+            const userSection = document.getElementById('user-section');
+            const loginSection = document.getElementById('login-section');
+            const userInfo = document.getElementById('user-info');
+            const userDropdown = document.getElementById('user-dropdown');
+            const userAvatar = document.getElementById('user-avatar');
+            const usernameElement = document.getElementById('username');
+            const logoutBtn = document.getElementById('logout-btn');
+            const profileBtn = document.getElementById('profile-btn');
+
+            // 日历相关元素
+            const calendarContainer = document.getElementById('calendar-container');
+            const calendarTitle = document.getElementById('calendar-title');
+            const calendarGrid = document.getElementById('calendar-grid');
+            const prevMonthBtn = document.getElementById('prev-month-btn');
+            const nextMonthBtn = document.getElementById('next-month-btn');
+            const todayBtn = document.getElementById('today-btn');
+            const historyTasksContainer = document.getElementById('history-tasks-container');
+            const historyTasksList = document.getElementById('history-tasks-list');
+            const historyDate = document.getElementById('history-date');
+            const historyCloseBtn = document.getElementById('history-close-btn');
+
+            // 登录提示对话框
+            const loginPromptModal = document.getElementById('login-prompt-modal');
+            const closeLoginPromptBtn = document.getElementById('close-login-prompt-btn');
+            const goLoginBtn = document.getElementById('go-login-btn');
+            const goRegisterBtn = document.getElementById('go-register-btn');
+            const overlay = document.getElementById('overlay');
+
+            // 当前日历日期
+            let currentDate = new Date();
+            let selectedDate = new Date();
+            // 用于存储日历中有任务的日期
+            let taskDates = [];
+
+            // 检查用户登录状态
+            const checkUserAuth = async () => {
+                try {
+                    if (!API.getToken()) {
+                        showLoginSection();
+                        return false;
+                    }
+
+                    const response = await API.getCurrentUser();
+                    if (response.success && response.data) {
+                        const user = response.data;
+                        showUserSection(user);
+                        return true;
+                    } else {
+                        API.clearToken();
+                        showLoginSection();
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('Auth check error:', error);
+                    API.clearToken();
+                    showLoginSection();
+                    return false;
+                }
+            };
+
+            // 显示登录区域
+            const showLoginSection = () => {
+                userSection.style.display = 'none';
+                loginSection.style.display = 'block';
+            };
+
+            // 显示用户区域
+            const showUserSection = (user) => {
+                userSection.style.display = 'block';
+                loginSection.style.display = 'none';
+
+                // 设置用户信息
+                usernameElement.textContent = user.username;
+                userAvatar.textContent = user.username.charAt(0).toUpperCase();
+            };
+
+            // 显示登录提示对话框
+            const showLoginPrompt = () => {
+                loginPromptModal.style.display = 'block';
+                overlay.style.display = 'block';
+            };
+
+            // 隐藏登录提示对话框
+            const hideLoginPrompt = () => {
+                loginPromptModal.style.display = 'none';
+                overlay.style.display = 'none';
+            };
+
+            // 初始化日历
+            const initCalendar = () => {
+                // 立即显示日历
+                calendarContainer.style.display = 'block';
+
+                // 显示历史任务容器，但显示默认提示
+                historyTasksContainer.style.display = 'block';
+
+                // 渲染日历
+                renderCalendar(currentDate);
+
+                // 加载任务日期
+                loadTaskDates();
+
+                // 月份导航事件
+                prevMonthBtn.addEventListener('click', () => {
+                    currentDate.setMonth(currentDate.getMonth() - 1);
+                    renderCalendar(currentDate);
+                    loadTaskDates();
+                });
+
+                nextMonthBtn.addEventListener('click', () => {
+                    currentDate.setMonth(currentDate.getMonth() + 1);
+                    renderCalendar(currentDate);
+                    loadTaskDates();
+                });
+
+                todayBtn.addEventListener('click', () => {
+                    currentDate = new Date();
+                    selectedDate = new Date();
+                    renderCalendar(currentDate);
+                    loadTaskDates();
+                });
+            };
+
+            // 渲染日历
+            const renderCalendar = (date) => {
+                // 设置日历标题
+                const year = date.getFullYear();
+                const month = date.getMonth() + 1;
+                calendarTitle.textContent = `${year}年${month}月`;
+
+                // 清空日历格子（除了表头）
+                while (calendarGrid.children.length > 7) {
+                    calendarGrid.removeChild(calendarGrid.lastChild);
+                }
+
+                // 获取当月第一天和最后一天
+                const firstDay = new Date(year, month - 1, 1);
+                const lastDay = new Date(year, month, 0);
+
+                // 计算需要显示的上个月的天数
+                const firstDayOfWeek = firstDay.getDay();
+
+                // 计算上个月的最后几天
+                const prevMonthLastDay = new Date(year, month - 1, 0).getDate();
+                for (let i = 0; i < firstDayOfWeek; i++) {
+                    const day = prevMonthLastDay - firstDayOfWeek + i + 1;
+                    const dayElement = createDayElement(day, true);
+                    dayElement.dataset.date = formatDate(new Date(year, month - 2, day));
+                    calendarGrid.appendChild(dayElement);
+                }
+
+                // 添加当月的天数
+                for (let i = 1; i <= lastDay.getDate(); i++) {
+                    const dayElement = createDayElement(i, false);
+
+                    // 检查是否是今天
+                    const today = new Date();
+                    if (today.getFullYear() === year && today.getMonth() === month - 1 && today.getDate() === i) {
+                        dayElement.classList.add('today');
+                    }
+
+                    // 检查是否是选中日期
+                    if (selectedDate.getFullYear() === year && selectedDate.getMonth() === month - 1 && selectedDate.getDate() === i) {
+                        dayElement.classList.add('active');
+                    }
+
+                    // 设置日期属性用于点击事件
+                    dayElement.dataset.date = formatDate(new Date(year, month - 1, i));
+
+                    // 检查是否有任务
+                    if (taskDates.includes(dayElement.dataset.date)) {
+                        dayElement.classList.add('has-tasks');
+                    }
+
+                    calendarGrid.appendChild(dayElement);
+                }
+
+                // 计算需要显示的下个月的天数
+                const remainingCells = 42 - (firstDayOfWeek + lastDay.getDate());
+                for (let i = 1; i <= remainingCells; i++) {
+                    const dayElement = createDayElement(i, true);
+                    dayElement.dataset.date = formatDate(new Date(year, month, i));
+                    calendarGrid.appendChild(dayElement);
+                }
+            };
+
+            // 创建日期元素
+            const createDayElement = (day, isOtherMonth) => {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+
+                if (isOtherMonth) {
+                    dayElement.classList.add('other-month');
+                }
+
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'day-number';
+                dayNumber.textContent = day;
+
+                dayElement.appendChild(dayNumber);
+
+                // 添加点击事件
+                dayElement.addEventListener('click', handleDayClick);
+
+                return dayElement;
+            };
+
+            // 处理日期点击事件
+            const handleDayClick = async (e) => {
+                // 检查用户是否登录
+                if (!API.getToken()) {
+                    showLoginPrompt();
+                    return;
+                }
+
+                // 获取点击的日期
+                const dateString = e.currentTarget.dataset.date;
+
+                // 移除之前选中的样式
+                const prevActive = document.querySelector('.calendar-day.active');
+                if (prevActive) {
+                    prevActive.classList.remove('active');
+                }
+
+                // 添加选中样式
+                e.currentTarget.classList.add('active');
+
+                // 更新选中日期
+                selectedDate = new Date(dateString);
+
+                // 加载该日期的任务
+                await loadHistoryTasks(dateString);
+            };
+
+            // 加载历史任务
+            const loadHistoryTasks = async (dateString) => {
+                try {
+                    // 显示加载状态
+                    historyTasksList.innerHTML = '<div class="loading">加载中...</div>';
+
+                    // 显示日期
+                    const date = new Date(dateString);
+                    historyDate.textContent = date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+
+                    // 加载该日的任务
+                    const response = await API.exportDaily(dateString);
+
+                    if (response.success && response.data) {
+                        const { tasks, pomodoros } = response.data;
+
+                        // 清空列表
+                        historyTasksList.innerHTML = '';
+
+                        if (tasks.length === 0) {
+                            historyTasksList.innerHTML = '<div class="no-tasks-message">这一天没有任务记录</div>';
+                            return;
+                        }
+
+                        // 渲染任务列表
+                        tasks.forEach(task => {
+                            const taskElement = document.createElement('div');
+                            taskElement.className = `task-item ${task.completed ? 'completed' : ''}`;
+
+                            taskElement.innerHTML = `
+                                <div class="task-info">
+                                    <div class="task-name">${task.taskName}</div>
+                                    <div class="task-pomodoros">
+                                        <span class="actual">${task.actualPomodoros}</span>
+                                        /
+                                        <span class="expected">${task.expectedPomodoros}</span>
+                                    </div>
+                                </div>
+                            `;
+
+                            historyTasksList.appendChild(taskElement);
+                        });
+                    }
+                } catch (error) {
+                    console.error('加载历史任务失败:', error);
+                    historyTasksList.innerHTML = '<div class="error-message">加载失败，请稍后再试</div>';
+                }
+            };
+
+            // 加载任务日期
+            const loadTaskDates = async () => {
+                if (!API.getToken()) return;
+
+                try {
+                    // 计算日期范围（当月及前后一个月）
+                    const year = currentDate.getFullYear();
+                    const month = currentDate.getMonth();
+
+                    const start = new Date(year, month - 1, 1);
+                    const end = new Date(year, month + 2, 0);
+
+                    const startDate = formatDate(start);
+                    const endDate = formatDate(end);
+
+                    // 获取日期范围内的任务数据
+                    const response = await API.exportRange(startDate, endDate);
+
+                    if (response.success && response.data) {
+                        // 提取有任务的日期
+                        taskDates = response.data.dailyStats
+                            .filter(stat => stat.tasksCount > 0)
+                            .map(stat => stat.date.split('T')[0]);
+
+                        // 重绘日历，添加任务标记
+                        renderCalendar(currentDate);
+                    }
+                } catch (error) {
+                    console.error('加载任务日期失败:', error);
+                }
+            };
+
+            // 格式化日期函数
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            // 用户菜单点击事件
+            userInfo.addEventListener('click', () => {
+                userDropdown.classList.toggle('active');
+            });
+
+            // 点击页面其他位置关闭下拉菜单
+            document.addEventListener('click', (e) => {
+                if (!userInfo.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.remove('active');
+                }
+            });
+
+            // 退出登录
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    await API.logout();
+                    API.clearToken();
+                    showLoginSection();
+                    window.location.reload();
+                } catch (error) {
+                    console.error('登出失败:', error);
+                }
+            });
+
+            // 进入个人中心
+            profileBtn.addEventListener('click', () => {
+                window.location.href = 'profile.html';
+            });
+
+            // 登录提示对话框关闭按钮
+            closeLoginPromptBtn.addEventListener('click', hideLoginPrompt);
+
+            // 去登录按钮
+            goLoginBtn.addEventListener('click', () => {
+                window.location.href = 'login.html';
+            });
+
+            // 去注册按钮
+            goRegisterBtn.addEventListener('click', () => {
+                window.location.href = 'register.html';
+            });
+
+            // 检查用户登录状态并初始化日历
+            checkUserAuth().then(isLoggedIn => {
+                if (isLoggedIn) {
+                    initCalendar();
+                }
+            });
+        });
+    </script>
+
+    <!-- AI助手按钮和聊天窗口 -->
+    <button class="ai-assistant-btn" id="ai-assistant-btn">
+        小No
+    </button>
+
+    <div class="ai-chat-container" id="ai-chat-container">
+        <div class="ai-chat-header">
+            <div class="ai-chat-title">
+                小No（搭载DeepSeek）
+            </div>
+            <div class="ai-chat-controls">
+                <button class="ai-chat-btn" id="ai-chat-fullscreen">
+                    <i class="fas fa-expand"></i>
+                </button>
+                <button class="ai-chat-btn" id="ai-chat-close">&times;</button>
+            </div>
+        </div>
+        <div class="ai-chat-messages" id="ai-chat-messages">
+            <div class="ai-message bot">
+                👋 你好！我是你的专业番茄工作法助手。
+            </div>
+            <div class="ai-message bot">
+                📊 请先点击"导入日志"按钮，我会分析你的使用数据，然后为你提供个性化的时间管理建议。
+            </div>
+        </div>
+        <div class="ai-chat-input">
+            <button id="import-logs-btn" class="import-logs-btn">
+                📊 导入日志
+            </button>
+            <input type="text" id="ai-chat-input-field" placeholder="请先导入日志..." disabled>
+            <button id="ai-chat-send-btn" disabled>
+                发送
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script>
+        // AI助手相关逻辑
+        document.addEventListener('DOMContentLoaded', function() {
+            const aiAssistantBtn = document.getElementById('ai-assistant-btn');
+            const aiChatContainer = document.getElementById('ai-chat-container');
+            const aiChatClose = document.getElementById('ai-chat-close');
+            const aiChatFullscreen = document.getElementById('ai-chat-fullscreen');
+            const aiChatMessages = document.getElementById('ai-chat-messages');
+            const aiChatInputField = document.getElementById('ai-chat-input-field');
+            const aiChatSendBtn = document.getElementById('ai-chat-send-btn');
+            const importLogsBtn = document.getElementById('import-logs-btn');
+
+            // 用于存储聊天记录和用户数据
+            let chatHistory = []; // 显示用的聊天历史
+            let conversationMessages = []; // 发送给AI的完整对话上下文
+            let userLogs = null;
+            let isAnalyzing = false;
+            let isFullscreen = false;
+            let logsImported = false;
+
+            // 全屏切换
+            aiChatFullscreen.addEventListener('click', () => {
+                isFullscreen = !isFullscreen;
+                aiChatContainer.classList.toggle('fullscreen');
+                aiChatFullscreen.innerHTML = isFullscreen ?
+                    '<i class="fas fa-compress"></i>' :
+                    '<i class="fas fa-expand"></i>';
+
+                // 如果是全屏,自动聚焦输入框
+                if (isFullscreen) {
+                    aiChatInputField.focus();
+                }
+            });
+
+            // ESC键退出全屏
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && isFullscreen) {
+                    isFullscreen = false;
+                    aiChatContainer.classList.remove('fullscreen');
+                    aiChatFullscreen.innerHTML = '<i class="fas fa-expand"></i>';
+                }
+            });
+
+            // 导入日志按钮事件
+            importLogsBtn.addEventListener('click', async () => {
+                if (logsImported) return;
+
+                try {
+                    // 显示加载状态
+                    importLogsBtn.textContent = '📊 导入中...';
+                    importLogsBtn.disabled = true;
+
+                    // 获取用户日志数据
+                    const response = await API.getUserLogs();
+                    if (response.success && response.data) {
+                        // 提取简化的AI数据，只保留关键字段（与debug-data.html保持一致）
+                        userLogs = {
+                            userInfo: response.data.userInfo,
+                            statistics: response.data.statistics,
+                            simplifiedRecords: response.data.aiData.pomodoroRecords.map(record => ({
+                                taskTitle: record.taskTitle,
+                                duration: record.duration,
+                                completed: record.completed
+                            }))
+                        };
+                        logsImported = true;
+
+                        // 隐藏导入按钮，启用聊天功能
+                        importLogsBtn.style.display = 'none';
+                        aiChatInputField.disabled = false;
+                        aiChatInputField.placeholder = '和我聊聊你的时间管理吧...';
+                        aiChatSendBtn.disabled = false;
+
+                        // 初始化对话上下文
+                        initializeConversation();
+
+                        // 发送初始分析消息
+                        showTypingIndicator();
+
+                        const analysisMessage = "请基于我的使用数据，为我提供个性化的时间管理分析和建议。";
+
+                        // 调用AI分析
+                        const aiResponse = await API.chatWithAI(analysisMessage, conversationMessages);
+                        hideTypingIndicator();
+
+                        if (aiResponse.success && aiResponse.data) {
+                            addMessageToChat('bot', aiResponse.data.message);
+                            // 将AI回复添加到对话上下文
+                            conversationMessages.push({
+                                role: "assistant",
+                                content: aiResponse.data.message
+                            });
+                        } else {
+                            const fallbackMessage = '数据分析完成！现在你可以向我提问关于时间管理的任何问题。';
+                            addMessageToChat('bot', fallbackMessage);
+                            conversationMessages.push({
+                                role: "assistant",
+                                content: fallbackMessage
+                            });
+                        }
+
+                        // 显示数据摘要
+                        const summaryMessage = `📊 数据导入成功！
+
+🎯 基本信息：
+• 使用天数：${userLogs.userInfo.totalDays}天
+• 总番茄钟：${userLogs.statistics.totalPomodoros}个
+• 任务完成率：${userLogs.statistics.completionRate}
+• 日均番茄钟：${userLogs.statistics.averagePomodorosPerDay}个
+
+现在你可以向我提问任何关于时间管理的问题！`;
+
+                        addMessageToChat('bot', summaryMessage);
+
+                    } else {
+                        throw new Error('获取用户数据失败');
+                    }
+                } catch (error) {
+                    console.error('导入日志失败:', error);
+                    addMessageToChat('bot', '抱歉，导入数据时出现问题。请稍后重试。');
+                    importLogsBtn.textContent = '📊 导入日志';
+                    importLogsBtn.disabled = false;
+                }
+            });
+
+            // 打开聊天窗口
+            aiAssistantBtn.addEventListener('click', () => {
+                // 检查用户是否登录
+                if (!API.getToken()) {
+                    showLoginPrompt();
+                    return;
+                }
+
+                // 如果窗口已经显示，直接返回
+                if (aiChatContainer.style.display === 'flex') {
+                    return;
+                }
+
+                aiChatContainer.style.display = 'flex';
+
+                // 重置状态（如果需要）
+                if (!logsImported) {
+                    importLogsBtn.style.display = 'block';
+                    aiChatInputField.disabled = true;
+                    aiChatSendBtn.disabled = true;
+                }
+            });
+
+            // 关闭聊天窗口
+            aiChatClose.addEventListener('click', () => {
+                aiChatContainer.style.display = 'none';
+            });
+
+            // 发送消息
+            aiChatSendBtn.addEventListener('click', sendMessage);
+
+            // 按回车发送消息
+            aiChatInputField.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+
+            // 发送消息函数
+            function sendMessage() {
+                const message = aiChatInputField.value.trim();
+                if (!message || !logsImported) return;
+
+                // 添加用户消息到聊天窗口
+                addMessageToChat('user', message);
+
+                // 添加用户消息到对话上下文
+                conversationMessages.push({
+                    role: "user",
+                    content: message
+                });
+
+                // 清空输入框
+                aiChatInputField.value = '';
+
+                // 显示正在输入状态
+                showTypingIndicator();
+
+                // 使用API类发送请求，传递完整的对话上下文
+                API.chatWithAI(message, conversationMessages)
+                    .then(response => {
+                        hideTypingIndicator();
+                        if (response.success && response.data) {
+                            addMessageToChat('bot', response.data.message);
+                            // 将AI回复添加到对话上下文
+                            conversationMessages.push({
+                                role: "assistant",
+                                content: response.data.message
+                            });
+                        } else {
+                            const fallbackMessage = '抱歉，我现在无法回复，请稍后再试。';
+                            addMessageToChat('bot', fallbackMessage);
+                            conversationMessages.push({
+                                role: "assistant",
+                                content: fallbackMessage
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('AI聊天请求失败:', error);
+                        hideTypingIndicator();
+                        const errorMessage = '抱歉，我现在无法回复，请稍后再试。';
+                        addMessageToChat('bot', errorMessage);
+                        conversationMessages.push({
+                            role: "assistant",
+                            content: errorMessage
+                        });
+                    });
+
+                // 滚动到最新消息
+                aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+            }
+
+            // 初始化对话上下文
+            function initializeConversation() {
+                // 清空之前的对话
+                conversationMessages = [];
+
+                // 生成简化的番茄钟记录信息（只包含三个关键字段）
+                const simplifiedRecordsDetails = userLogs.simplifiedRecords.map((record, index) =>
+                    `${index + 1}. "${record.taskTitle}" - ${record.duration}分钟 - ${record.completed ? '✅已完成' : '❌未完成'}`
+                ).join('\n');
+
+                // 设置系统提示词
+                const systemPrompt = `你是一个专业的番茄工作法时间管理助手小No。你的任务是基于用户的实际使用数据，提供个性化的时间管理建议和分析。
+
+请遵循以下原则：
+1. 基于用户的真实数据进行分析和建议
+2. 提供具体、可操作的建议
+3. 保持友好、鼓励的语调
+4. 回答要简洁明了，不超过200字
+5. 重点关注效率提升和习惯养成
+6. 记住之前的对话内容，保持上下文连贯性
+
+=== 用户基本信息 ===
+- 用户名：${userLogs.userInfo.username}
+- 使用天数：${userLogs.userInfo.totalDays}天
+- 注册时间：${new Date(userLogs.userInfo.joinDate).toLocaleDateString('zh-CN')}
+
+=== 统计摘要 ===
+- 总任务数：${userLogs.statistics.totalTasks}个
+- 已完成任务：${userLogs.statistics.completedTasks}个
+- 任务完成率：${userLogs.statistics.completionRate}
+- 总番茄钟：${userLogs.statistics.totalPomodoros}个
+- 日均番茄钟：${userLogs.statistics.averagePomodorosPerDay}个
+
+=== 简化的番茄钟记录 (${userLogs.simplifiedRecords.length}条) ===
+${simplifiedRecordsDetails}
+
+基于以上数据，你可以为用户提供时间管理建议、效率分析和工作习惯优化建议。`;
+
+                conversationMessages.push({
+                    role: "system",
+                    content: systemPrompt
+                });
+
+                console.log('🤖 对话上下文已初始化，使用简化的用户数据');
+                console.log('🍅 简化记录数量:', userLogs.simplifiedRecords.length);
+                console.log('📝 系统提示词长度:', systemPrompt.length);
+                console.log('📋 简化记录示例:', simplifiedRecordsDetails.substring(0, 200) + '...');
+            }
+
+            // 请求AI分析数据
+            function requestAIAnalysis() {
+                // 如果正在分析中，直接返回
+                if (isAnalyzing) return;
+
+                // 设置分析状态
+                isAnalyzing = true;
+
+                // 显示正在输入状态
+                showTypingIndicator();
+
+                API.getAIAnalysis()
+                    .then(response => {
+                        if (response.success && response.data) {
+                            hideTypingIndicator();
+
+                            const analysis = response.data.analysis;
+                            const stats = response.data.stats;
+
+                            // 添加分析结果到聊天
+                            addMessageToChat('bot', analysis);
+
+                            // 更新缓存
+                            window.aiAnalysisCache = {
+                                stats: stats,
+                                analysis: analysis,
+                                timestamp: Date.now()
+                            };
+                        }
+                    })
+                    .catch(error => {
+                        console.error('AI分析请求失败:', error);
+                        hideTypingIndicator();
+                        addMessageToChat('bot', '我已准备好回答你的问题。');
+                    })
+                    .finally(() => {
+                        // 重置分析状态
+                        isAnalyzing = false;
+                    });
+            }
+
+            // 添加消息到聊天窗口
+            function addMessageToChat(role, content) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `ai-message ${role}`;
+
+                // 处理换行
+                messageDiv.innerHTML = content.replace(/\n/g, '<br>');
+
+                aiChatMessages.appendChild(messageDiv);
+
+                // 滚动到最新消息
+                aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+
+                // 添加到历史记录
+                chatHistory.push({ role, content });
+            }
+
+            // 显示正在输入指示器
+            function showTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'ai-typing';
+                typingDiv.id = 'ai-typing';
+
+                for (let i = 0; i < 3; i++) {
+                    const dot = document.createElement('span');
+                    typingDiv.appendChild(dot);
+                }
+
+                aiChatMessages.appendChild(typingDiv);
+                aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+            }
+
+            // 隐藏正在输入指示器
+            function hideTypingIndicator() {
+                const typingIndicator = document.getElementById('ai-typing');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

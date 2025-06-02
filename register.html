@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - NoPotato</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .auth-container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 2rem;
+            background-color: var(--white);
+            border-radius: 1rem;
+            box-shadow: var(--shadow);
+        }
+
+        .auth-title {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .auth-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .auth-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .auth-link a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            color: #ff3333;
+            background-color: rgba(255, 51, 51, 0.1);
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>NoPotato <span class="emoji">🍅</span></h1>
+            <p class="subtitle">专注工作，高效学习</p>
+        </header>
+
+        <div class="auth-container">
+            <div class="auth-title">
+                <h2>创建账号</h2>
+            </div>
+
+            <div class="error-message" id="error-message"></div>
+
+            <form class="auth-form" id="register-form">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" required placeholder="请输入用户名">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">邮箱</label>
+                    <input type="email" id="email" name="email" required placeholder="请输入邮箱">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" required placeholder="请输入密码（至少6位）" minlength="6">
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm-password">确认密码</label>
+                    <input type="password" id="confirm-password" name="confirm-password" required placeholder="请再次输入密码" minlength="6">
+                </div>
+
+                <button type="submit" class="primary-btn">注册</button>
+            </form>
+
+            <div class="auth-link">
+                已有账号？<a href="login.html">立即登录</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+// 动态获取API基础URL
+const getApiUrl = () => {
+  // 检测环境
+  const isDevelopment = window.location.hostname === 'localhost' ||
+                       window.location.hostname === '127.0.0.1' ||
+                       window.location.port === '8080';
+
+  if (isDevelopment) {
+    return 'http://localhost:5000/api';
+  } else {
+    return '/api';  // 生产环境使用相对路径
+  }
+};
+
+const API_URL = getApiUrl();
+
+// 管理API请求的类
+class API {
+  static getToken() {
+    return localStorage.getItem('pomo_token');
+  }
+
+  static setToken(token) {
+    localStorage.setItem('pomo_token', token);
+  }
+
+  static clearToken() {
+    localStorage.removeItem('pomo_token');
+  }
+
+  static getHeaders() {
+    const token = this.getToken();
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    return headers;
+  }
+
+  static async request(endpoint, method = 'GET', data = null) {
+    const url = `${API_URL}${endpoint}`;
+    const options = {
+      method,
+      headers: this.getHeaders()
+    };
+
+    if (data && (method === 'POST' || method === 'PUT')) {
+      options.body = JSON.stringify(data);
+    }
+
+    try {
+      const response = await fetch(url, options);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || '请求失败');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('API请求错误:', error);
+      throw error;
+    }
+  }
+
+  static async register(userData) {
+    const result = await this.request('/auth/register', 'POST', userData);
+    if (result.token) {
+      this.setToken(result.token);
+    }
+    return result;
+  }
+
+  static async login(credentials) {
+    const result = await this.request('/auth/login', 'POST', credentials);
+    if (result.token) {
+      this.setToken(result.token);
+    }
+    return result;
+  }
+}
+
+// 导出API类
+window.API = API;
+</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 应用保存的主题设置
+            const savedTheme = localStorage.getItem('theme') || 'default';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+
+            // 检查是否已登录
+            const token = localStorage.getItem('pomo_token');
+            if (token) {
+                // 如果已登录，重定向到主页
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const registerForm = document.getElementById('register-form');
+            const errorMessage = document.getElementById('error-message');
+
+            registerForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const username = document.getElementById('username').value;
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const confirmPassword = document.getElementById('confirm-password').value;
+
+                // 验证两次密码是否一致
+                if (password !== confirmPassword) {
+                    errorMessage.textContent = '两次输入的密码不一致';
+                    errorMessage.style.display = 'block';
+                    return;
+                }
+
+                try {
+                    errorMessage.style.display = 'none';
+                    const result = await API.register({ username, email, password });
+
+                    if (result.success) {
+                        // 注册成功，重定向到主页
+                        window.location.href = 'index.html';
+                    }
+                } catch (error) {
+                    errorMessage.textContent = error.message || '注册失败，请稍后再试';
+                    errorMessage.style.display = 'block';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

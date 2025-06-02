@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>番茄排行 - NoPotato</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* 导航栏样式 */
+        header {
+            position: relative;
+            text-align: center;
+            padding: 1rem 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .back-home {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: var(--transition);
+        }
+
+        .back-home:hover {
+            background-color: var(--primary-light);
+        }
+
+        .back-home i {
+            font-size: 1.2rem;
+        }
+
+        .ranking-container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 2rem;
+            background-color: var(--white);
+            border-radius: 1rem;
+            box-shadow: var(--shadow);
+        }
+
+        .demo-notice {
+            background-color: var(--primary-light);
+            padding: 1rem;
+            border-radius: 0.8rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .demo-notice i {
+            font-size: 1.2rem;
+            color: var(--primary-color);
+        }
+
+        .demo-text {
+            font-size: 0.9rem;
+            color: var(--gray-dark);
+        }
+
+        .ranking-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .ranking-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gray-dark);
+            flex-grow: 1;
+        }
+
+        .ranking-period {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .period-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--primary-color);
+            border-radius: 20px;
+            background: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .period-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .ranking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            background-color: var(--gray-light);
+            border-radius: 0.8rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ranking-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            background-color: var(--white);
+        }
+
+        .ranking-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background-color: var(--primary-color);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .ranking-item:hover::before {
+            opacity: 1;
+        }
+
+        .rank-number {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: 600;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .rank-1 {
+            background-color: #FFD700;
+            color: white;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .rank-2 {
+            background-color: #C0C0C0;
+            color: white;
+            box-shadow: 0 0 10px rgba(192, 192, 192, 0.5);
+        }
+
+        .rank-3 {
+            background-color: #CD7F32;
+            color: white;
+            box-shadow: 0 0 10px rgba(205, 127, 50, 0.5);
+        }
+
+        .user-info {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.2rem;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-name {
+            font-weight: 500;
+            font-size: 1.1rem;
+            color: var(--gray-dark);
+        }
+
+        .pomodoro-count {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary-color);
+            font-weight: 600;
+            background-color: rgba(255, 107, 107, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .pomodoro-count i {
+            color: #ff6b6b;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .loading i {
+            font-size: 1.2rem;
+        }
+
+        .error-message {
+            text-align: center;
+            padding: 2rem;
+            color: #ff4d4d;
+            background-color: #fff1f1;
+            border-radius: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .error-message i {
+            font-size: 1.2rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--gray);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .empty-state p {
+            margin: 0.5rem 0;
+        }
+
+        .empty-state .sub-text {
+            font-size: 0.9rem;
+            color: var(--gray-dark);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <a href="index.html" class="back-home">
+                <i class="fas fa-home"></i>
+                返回主页
+            </a>
+            <h1>NoPotato <span class="emoji">🍅</span></h1>
+            <p class="subtitle">番茄达人排行榜</p>
+        </header>
+
+        <div class="ranking-container">
+            <div class="ranking-header">
+                <div class="ranking-title">番茄排行榜</div>
+                <div class="ranking-period">
+                    <button class="period-btn active" data-period="week">本周</button>
+                    <button class="period-btn" data-period="month">本月</button>
+                    <button class="period-btn" data-period="all">全部</button>
+                </div>
+            </div>
+            <div class="ranking-list" id="ranking-list">
+                <!-- 排行榜数据将通过JavaScript动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const rankingList = document.getElementById('ranking-list');
+            const periodBtns = document.querySelectorAll('.period-btn');
+            let currentPeriod = 'week';
+
+            // 加载排行榜数据
+            async function loadRanking(period) {
+                try {
+                    // 显示加载状态
+                    rankingList.innerHTML = `
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            加载中...
+                        </div>
+                    `;
+                    
+                    // 检查用户是否登录
+                    if (!API.getToken()) {
+                        rankingList.innerHTML = `
+                            <div class="error-message">
+                                <i class="fas fa-exclamation-circle"></i>
+                                请先登录后查看排行榜
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    const response = await API.getRanking(period);
+                    
+                    if (response.success && response.data && response.data.length > 0) {
+                        renderRanking(response.data);
+                    } else {
+                        showEmptyRanking();
+                    }
+                } catch (error) {
+                    console.error('加载排行榜数据失败:', error);
+                    rankingList.innerHTML = `
+                        <div class="error-message">
+                            <i class="fas fa-exclamation-circle"></i>
+                            加载失败，请稍后再试
+                        </div>
+                    `;
+                }
+            }
+
+            // 渲染排行榜
+            function renderRanking(data) {
+                rankingList.innerHTML = '';
+                
+                // 添加排名
+                data.forEach((user, index) => {
+                    const rankClass = index < 3 ? `rank-${index + 1}` : '';
+                    const item = document.createElement('div');
+                    item.className = 'ranking-item';
+                    
+                    // 使用首字母作为头像
+                    const firstLetter = user.username ? user.username.charAt(0).toUpperCase() : '?';
+                    
+                    // 根据排名添加不同的奖牌图标
+                    let medalIcon = '';
+                    if (index === 0) {
+                        medalIcon = '<i class="fas fa-crown" style="color: #FFD700; margin-left: 8px;"></i>';
+                    } else if (index === 1) {
+                        medalIcon = '<i class="fas fa-medal" style="color: #C0C0C0; margin-left: 8px;"></i>';
+                    } else if (index === 2) {
+                        medalIcon = '<i class="fas fa-medal" style="color: #CD7F32; margin-left: 8px;"></i>';
+                    }
+                    
+                    item.innerHTML = `
+                        <div class="rank-number ${rankClass}">${index + 1}</div>
+                        <div class="user-info">
+                            <div class="user-avatar">${firstLetter}</div>
+                            <div class="user-name">
+                                ${user.username || '未知用户'}
+                                ${medalIcon}
+                            </div>
+                        </div>
+                        <div class="pomodoro-count">
+                            <i class="fas fa-clock"></i>
+                            ${user.pomodoroCount || 0} 个番茄
+                        </div>
+                    `;
+                    
+                    rankingList.appendChild(item);
+                });
+            }
+
+            // 如果排行榜为空，显示一个友好的提示
+            function showEmptyRanking() {
+                rankingList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-trophy"></i>
+                        <p>暂无排行数据</p>
+                        <p class="sub-text">快来完成一个番茄钟，成为排行榜第一名吧！</p>
+                    </div>
+                `;
+            }
+
+            // 切换时间周期
+            periodBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    periodBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentPeriod = btn.dataset.period;
+                    loadRanking(currentPeriod);
+                });
+            });
+
+            // 初始加载
+            loadRanking(currentPeriod);
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    
+    <!-- 
+    注意: 目前使用的是示例数据，而不是真实API数据
+    当后端API准备就绪后，请修改loadRanking函数，取消注释真实API调用代码
+    并注释掉示例数据相关代码
+    -->
+</body>
+</html> 

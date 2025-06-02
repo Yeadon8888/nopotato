@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #ccc;
+        }
+        .success { background: #d4edda; border-color: #28a745; color: #155724; }
+        .error { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        .info { background: #d1ecf1; border-color: #17a2b8; color: #0c5460; }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .chat-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 5px;
+        }
+        .user { background: #e3f2fd; text-align: right; }
+        .bot { background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI功能测试</h1>
+        
+        <div class="test-section">
+            <h3>🔑 登录测试</h3>
+            <input type="email" id="login-email" placeholder="邮箱" value="">
+            <input type="password" id="login-password" placeholder="密码" value="test123456">
+            <button onclick="testLogin()">登录</button>
+            <div id="login-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 获取用户日志</h3>
+            <button onclick="testGetUserLogs()" id="logs-btn">获取用户日志</button>
+            <div id="logs-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🤖 AI聊天测试</h3>
+            <textarea id="chat-message" placeholder="输入消息..." rows="3">请分析我的番茄钟使用情况并提供建议</textarea>
+            <button onclick="testAIChat()" id="chat-btn" disabled>发送AI聊天</button>
+            <div class="chat-container" id="chat-container"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔄 完整流程测试</h3>
+            <button onclick="testFullFlow()" id="full-flow-btn" disabled>测试完整AI流程</button>
+            <div id="full-flow-result"></div>
+        </div>
+    </div>
+
+    <!-- 加载API配置 -->
+    <script src="api.js"></script>
+    
+    <script>
+        let userLogs = null;
+        
+        function addResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+
+        function addChatMessage(sender, message) {
+            const container = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.innerHTML = `<strong>${sender === 'user' ? '用户' : 'AI'}:</strong><br>${message}`;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!email || !password) {
+                addResult('login-result', '❌ 请填写邮箱和密码', 'error');
+                return;
+            }
+            
+            addResult('login-result', '🔄 正在登录...', 'info');
+            
+            try {
+                const response = await API.login(email, password);
+                if (response.success && response.token) {
+                    API.setToken(response.token);
+                    addResult('login-result', `✅ 登录成功!<br>Token: ${response.token.substring(0, 20)}...`, 'success');
+                    
+                    // 启用其他功能
+                    document.getElementById('logs-btn').disabled = false;
+                    document.getElementById('full-flow-btn').disabled = false;
+                } else {
+                    addResult('login-result', `❌ 登录失败: ${response.message || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                console.error('登录错误:', error);
+                addResult('login-result', `❌ 登录请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetUserLogs() {
+            if (!API.getToken()) {
+                addResult('logs-result', '❌ 请先登录', 'error');
+                return;
+            }
+            
+            addResult('logs-result', '🔄 正在获取用户日志...', 'info');
+            
+            try {
+                const response = await API.getUserLogs();
+                if (response.success && response.data) {
+                    userLogs = response.data;
+                    
+                    const summary = `✅ 用户日志获取成功!
+                    
+📊 数据摘要：
+• 用户名：${userLogs.userInfo.username}
+• 使用天数：${userLogs.userInfo.totalDays}天
+• 总番茄钟：${userLogs.statistics.totalPomodoros}个
+• 任务完成率：${userLogs.statistics.completionRate}
+• 日均番茄钟：${userLogs.statistics.averagePomodorosPerDay}个
+• 最近任务数：${userLogs.recentTasks.length}个
+• 最近番茄钟记录：${userLogs.recentPomodoros.length}个
+
+<pre>${JSON.stringify(userLogs, null, 2)}</pre>`;
+                    
+                    addResult('logs-result', summary, 'success');
+                    
+                    // 启用聊天功能
+                    document.getElementById('chat-btn').disabled = false;
+                } else {
+                    addResult('logs-result', `❌ 获取日志失败: ${response.message || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                console.error('获取日志错误:', error);
+                addResult('logs-result', `❌ 获取日志请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAIChat() {
+            const message = document.getElementById('chat-message').value.trim();
+            if (!message) {
+                alert('请输入消息');
+                return;
+            }
+            
+            if (!userLogs) {
+                alert('请先获取用户日志');
+                return;
+            }
+            
+            addChatMessage('user', message);
+            
+            try {
+                const response = await API.chatWithAI(message, userLogs, true);
+                if (response.success && response.data) {
+                    addChatMessage('bot', response.data.message);
+                } else {
+                    addChatMessage('bot', `错误: ${response.message || '未知错误'}`);
+                }
+            } catch (error) {
+                console.error('AI聊天错误:', error);
+                addChatMessage('bot', `请求失败: ${error.message}`);
+            }
+        }
+
+        async function testFullFlow() {
+            addResult('full-flow-result', '🔄 开始完整流程测试...', 'info');
+            
+            try {
+                // 1. 获取用户日志
+                addResult('full-flow-result', '📊 步骤1: 获取用户日志...', 'info');
+                const logsResponse = await API.getUserLogs();
+                if (!logsResponse.success) {
+                    throw new Error('获取用户日志失败');
+                }
+                
+                // 2. 发送初始分析请求
+                addResult('full-flow-result', '🤖 步骤2: 请求AI分析...', 'info');
+                const analysisResponse = await API.chatWithAI(
+                    "请基于我的使用数据，为我提供个性化的时间管理分析和建议。",
+                    logsResponse.data,
+                    true
+                );
+                
+                if (!analysisResponse.success) {
+                    throw new Error('AI分析失败');
+                }
+                
+                // 3. 发送后续聊天消息
+                addResult('full-flow-result', '💬 步骤3: 测试后续对话...', 'info');
+                const chatResponse = await API.chatWithAI(
+                    "我应该如何提高我的工作效率？",
+                    logsResponse.data,
+                    false
+                );
+                
+                if (!chatResponse.success) {
+                    throw new Error('后续聊天失败');
+                }
+                
+                const result = `✅ 完整流程测试成功！
+
+🔍 分析结果：
+${analysisResponse.data.message}
+
+💡 聊天回复：
+${chatResponse.data.message}
+
+📊 用户数据摘要：
+• 用户：${logsResponse.data.userInfo.username}
+• 使用天数：${logsResponse.data.userInfo.totalDays}天
+• 总番茄钟：${logsResponse.data.statistics.totalPomodoros}个`;
+                
+                addResult('full-flow-result', result, 'success');
+                
+            } catch (error) {
+                console.error('完整流程测试失败:', error);
+                addResult('full-flow-result', `❌ 完整流程测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时的初始化
+        window.addEventListener('load', () => {
+            console.log('AI功能测试页面加载完成');
+            
+            // 如果已经有token，启用相应功能
+            if (API.getToken()) {
+                document.getElementById('logs-btn').disabled = false;
+                document.getElementById('full-flow-btn').disabled = false;
+                addResult('login-result', '✅ 检测到已登录状态', 'success');
+            }
+        });
+    </script>
+</body>
+</html>

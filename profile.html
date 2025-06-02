@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心 - NoPotato</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* 导航栏样式 */
+        header {
+            position: relative;
+            text-align: center;
+            padding: 1rem 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .back-home {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: var(--transition);
+        }
+
+        .back-home:hover {
+            background-color: var(--primary-light);
+        }
+
+        .back-home i {
+            font-size: 1.2rem;
+        }
+
+        .profile-container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 2rem;
+            background-color: var(--white);
+            border-radius: 1rem;
+            box-shadow: var(--shadow);
+        }
+        
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--gray-light);
+            padding-bottom: 1.5rem;
+        }
+        
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: 600;
+            margin-right: 1.5rem;
+        }
+        
+        .profile-info {
+            flex-grow: 1;
+        }
+        
+        .profile-info h2 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.8rem;
+        }
+        
+        .profile-info .profile-email {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        .profile-info .profile-date {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .stats-section {
+            margin: 2rem 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .stat-card {
+            padding: 1.5rem;
+            border-radius: 0.8rem;
+            background-color: var(--gray-light);
+            text-align: center;
+        }
+        
+        .stat-card .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-card .stat-label {
+            font-size: 0.9rem;
+            color: var(--gray-dark);
+        }
+        
+        .heatmap-section {
+            margin: 2rem 0;
+        }
+        
+        .heatmap-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .date-range-selector {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .date-input {
+            padding: 0.5rem;
+            border: 1px solid var(--gray-light);
+            border-radius: 0.5rem;
+        }
+        
+        .heatmap-container {
+            min-height: 300px;
+            border-radius: 0.8rem;
+            background-color: var(--gray-light);
+            padding: 1.5rem;
+            position: relative;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+        
+        .secondary-btn {
+            background-color: var(--gray-light);
+            color: var(--gray-dark);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <a href="index.html" class="back-home">
+                <i class="fas fa-home"></i>
+                返回主页
+            </a>
+            <h1>NoPotato <span class="emoji">🍅</span></h1>
+            <p class="subtitle">专注工作，高效学习</p>
+        </header>
+
+        <div class="profile-container" id="profile-container">
+            <div class="loading" id="loading">加载中...</div>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const profileContainer = document.getElementById('profile-container');
+            const loading = document.getElementById('loading');
+            
+            // 检查用户登录状态
+            if (!API.getToken()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            try {
+                // 获取用户信息
+                const { data: user } = await API.getCurrentUser();
+                
+                // 获取默认统计数据（最近30天）
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const today = new Date();
+                
+                const startDate = formatDate(thirtyDaysAgo);
+                const endDate = formatDate(today);
+                
+                const { data: stats } = await API.getPomodoroStats({
+                    start: startDate,
+                    end: endDate
+                });
+                
+                // 获取日期范围的数据
+                const { data: rangeData } = await API.exportRange(startDate, endDate);
+                
+                // 隐藏加载中提示
+                loading.style.display = 'none';
+                
+                // 渲染用户信息和统计数据
+                renderProfile(user, stats, rangeData, startDate, endDate);
+                
+                // 初始化主题选择器
+                initThemeSelector();
+                
+            } catch (error) {
+                console.error('加载个人中心数据失败:', error);
+                profileContainer.innerHTML = `
+                    <div class="error-message" style="display: block">
+                        加载数据失败: ${error.message || '请稍后再试'}
+                    </div>
+                `;
+            }
+        });
+        
+        // 渲染个人资料和统计数据
+        function renderProfile(user, stats, rangeData, startDate, endDate) {
+            const profileContainer = document.getElementById('profile-container');
+            const createdAt = new Date(user.createdAt).toLocaleDateString('zh-CN');
+            
+            // 计算总任务数
+            const totalTasks = rangeData.tasks.length;
+            const completedTasks = rangeData.tasks.filter(task => task.completed).length;
+            const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            
+            // 生成HTML
+            profileContainer.innerHTML = `
+                <div class="profile-header">
+                    <div class="profile-avatar">${user.username.charAt(0).toUpperCase()}</div>
+                    <div class="profile-info">
+                        <h2>${user.username}</h2>
+                        <div class="profile-email">${user.email}</div>
+                        <div class="profile-date">注册时间: ${createdAt}</div>
+                    </div>
+                </div>
+                
+                <div class="stats-section">
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.workPomodoros || 0}</div>
+                        <div class="stat-label">完成番茄数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${Math.round((stats.workPomodoros * 25) / 60) || 0}</div>
+                        <div class="stat-label">总专注小时</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${completedTasks}</div>
+                        <div class="stat-label">完成任务数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${completionRate}%</div>
+                        <div class="stat-label">任务完成率</div>
+                    </div>
+                </div>
+                
+                <div class="heatmap-section">
+                    <div class="heatmap-header">
+                        <h3>番茄工作热力图</h3>
+                        <div class="date-range-selector">
+                            <input type="date" id="start-date" class="date-input" value="${startDate}">
+                            <span>至</span>
+                            <input type="date" id="end-date" class="date-input" value="${endDate}">
+                            <button id="update-heatmap" class="primary-btn">更新</button>
+                        </div>
+                    </div>
+                    <div class="heatmap-container" id="heatmap-container">
+                        <div id="tooltip" class="tooltip"></div>
+                    </div>
+                </div>
+                
+                <div class="theme-selector-container">
+                    <div class="theme-selector-header">
+                        <h3>选择主题</h3>
+                    </div>
+                    <div class="theme-options" id="theme-options">
+                        <div class="theme-option" data-theme="default">
+                            <div class="theme-preview">
+                                <div class="theme-preview-header" style="background-color: #ff6b6b;"></div>
+                                <div class="theme-preview-body" style="background-color: #ffffff;"></div>
+                            </div>
+                            <div class="theme-name">番茄红</div>
+                        </div>
+                        <div class="theme-option" data-theme="forest">
+                            <div class="theme-preview">
+                                <div class="theme-preview-header" style="background-color: #1b998b;"></div>
+                                <div class="theme-preview-body" style="background-color: #ffffff;"></div>
+                            </div>
+                            <div class="theme-name">森林绿</div>
+                        </div>
+                        <div class="theme-option" data-theme="ocean">
+                            <div class="theme-preview">
+                                <div class="theme-preview-header" style="background-color: #3a86ff;"></div>
+                                <div class="theme-preview-body" style="background-color: #ffffff;"></div>
+                            </div>
+                            <div class="theme-name">海洋蓝</div>
+                        </div>
+                        <div class="theme-option" data-theme="violet">
+                            <div class="theme-preview">
+                                <div class="theme-preview-header" style="background-color: #8338ec;"></div>
+                                <div class="theme-preview-body" style="background-color: #ffffff;"></div>
+                            </div>
+                            <div class="theme-name">紫罗兰</div>
+                        </div>
+                        <div class="theme-option" data-theme="dark">
+                            <div class="theme-preview">
+                                <div class="theme-preview-header" style="background-color: #bb86fc;"></div>
+                                <div class="theme-preview-body" style="background-color: #121212;"></div>
+                            </div>
+                            <div class="theme-name">暗黑模式</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 初始化热力图
+            initHeatmap(rangeData.dailyStats);
+            
+            // 添加日期范围选择器事件
+            document.getElementById('update-heatmap').addEventListener('click', async () => {
+                const newStartDate = document.getElementById('start-date').value;
+                const newEndDate = document.getElementById('end-date').value;
+                
+                try {
+                    document.getElementById('heatmap-container').innerHTML = '<div class="loading">更新中...</div>';
+                    const { data: newRangeData } = await API.exportRange(newStartDate, newEndDate);
+                    document.getElementById('heatmap-container').innerHTML = '<div id="tooltip" class="tooltip"></div>';
+                    initHeatmap(newRangeData.dailyStats);
+                } catch (error) {
+                    console.error('更新热力图失败:', error);
+                    document.getElementById('heatmap-container').innerHTML = `
+                        <div class="error-message" style="display: block">
+                            更新热力图失败: ${error.message || '请稍后再试'}
+                        </div>
+                    `;
+                }
+            });
+        }
+        
+        // 初始化热力图
+        function initHeatmap(dailyStats) {
+            // 确保有数据
+            if (!dailyStats || dailyStats.length === 0) {
+                document.getElementById('heatmap-container').innerHTML = '<div class="loading">暂无数据</div>';
+                return;
+            }
+            
+            // 设置热力图尺寸
+            const margin = { top: 30, right: 30, bottom: 30, left: 30 };
+            const width = document.getElementById('heatmap-container').clientWidth - margin.left - margin.right;
+            const height = 300 - margin.top - margin.bottom;
+            
+            // 创建SVG元素
+            const svg = d3.select('#heatmap-container')
+                .append('svg')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom)
+                .append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+            
+            // 准备数据
+            const data = dailyStats.map(d => ({
+                date: new Date(d.date),
+                value: d.workPomodoros,
+                tasks: d.completedTasksCount,
+                minutes: d.totalWorkMinutes
+            }));
+            
+            // 计算每个日期的位置
+            const x = d3.scaleBand()
+                .range([0, width])
+                .domain(data.map(d => d.date))
+                .padding(0.1);
+            
+            // 添加X轴
+            svg.append('g')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x).tickFormat(d => {
+                    const date = new Date(d);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                }).tickValues(x.domain().filter((d, i) => i % 3 === 0)));
+            
+            // 计算颜色比例
+            const maxValue = d3.max(data, d => d.value) || 1;
+            const color = d3.scaleLinear()
+                .domain([0, maxValue / 2, maxValue])
+                .range(['#f1f5f9', '#ff9c6e', '#ff4d4f']);
+            
+            // 创建热力图单元格
+            svg.selectAll('rect')
+                .data(data)
+                .enter()
+                .append('rect')
+                .attr('x', d => x(d.date))
+                .attr('y', 0)
+                .attr('width', x.bandwidth())
+                .attr('height', height - 30)
+                .style('fill', d => color(d.value))
+                .style('stroke', '#fff')
+                .style('stroke-width', 2)
+                .on('mouseover', function(event, d) {
+                    const tooltip = d3.select('#tooltip');
+                    const date = d.date.toLocaleDateString('zh-CN');
+                    tooltip.html(`日期: ${date}<br>番茄数: ${d.value}<br>完成任务: ${d.tasks}<br>工作时间: ${Math.round(d.minutes / 60)}小时${d.minutes % 60}分钟`)
+                        .style('left', (event.pageX - document.getElementById('heatmap-container').getBoundingClientRect().left + 10) + 'px')
+                        .style('top', (event.pageY - document.getElementById('heatmap-container').getBoundingClientRect().top - 40) + 'px')
+                        .style('opacity', 0.9);
+                })
+                .on('mouseout', function() {
+                    d3.select('#tooltip').style('opacity', 0);
+                });
+            
+            // 添加图例
+            const legendWidth = 150;
+            const legendHeight = 10;
+            
+            const legendScale = d3.scaleLinear()
+                .domain([0, maxValue])
+                .range([0, legendWidth]);
+            
+            const legendAxis = d3.axisBottom(legendScale)
+                .tickSize(13)
+                .ticks(3);
+            
+            const defs = svg.append('defs');
+            const linearGradient = defs.append('linearGradient')
+                .attr('id', 'linear-gradient');
+            
+            linearGradient.selectAll('stop')
+                .data([
+                    {offset: '0%', color: '#f1f5f9'},
+                    {offset: '50%', color: '#ff9c6e'},
+                    {offset: '100%', color: '#ff4d4f'}
+                ])
+                .enter().append('stop')
+                .attr('offset', d => d.offset)
+                .attr('stop-color', d => d.color);
+            
+            svg.append('g')
+                .attr('transform', `translate(${width - legendWidth - 10}, ${height - 20})`)
+                .append('rect')
+                .attr('width', legendWidth)
+                .attr('height', legendHeight)
+                .style('fill', 'url(#linear-gradient)');
+            
+            svg.append('g')
+                .attr('transform', `translate(${width - legendWidth - 10}, ${height - 20})`)
+                .call(legendAxis)
+                .select('.domain').remove();
+            
+            svg.append('text')
+                .attr('x', width - legendWidth - 10)
+                .attr('y', height - 30)
+                .text('番茄数量')
+                .style('font-size', '0.8rem');
+        }
+        
+        // 初始化主题选择器
+        function initThemeSelector() {
+            const themeOptions = document.getElementById('theme-options');
+            const currentTheme = localStorage.getItem('theme') || 'default';
+            
+            // 设置当前主题
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            
+            // 高亮显示当前主题选项
+            const activeOption = themeOptions.querySelector(`[data-theme="${currentTheme}"]`);
+            if (activeOption) {
+                activeOption.classList.add('active');
+            }
+            
+            // 添加主题选择事件
+            themeOptions.addEventListener('click', (e) => {
+                const themeOption = e.target.closest('.theme-option');
+                if (!themeOption) return;
+                
+                const theme = themeOption.dataset.theme;
+                
+                // 移除所有激活状态
+                themeOptions.querySelectorAll('.theme-option').forEach(option => {
+                    option.classList.remove('active');
+                });
+                
+                // 添加新的激活状态
+                themeOption.classList.add('active');
+                
+                // 保存并应用主题
+                localStorage.setItem('theme', theme);
+                document.documentElement.setAttribute('data-theme', theme);
+            });
+        }
+        
+        // 日期格式化函数
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+    </script>
+</body>
+</html> 
